@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import logging
 import time
+
 import cv2
 from numpy.linalg import norm
 import numpy as np

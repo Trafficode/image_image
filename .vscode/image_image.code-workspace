@@ -1,0 +1,18 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		}
+	],
+	"settings": {
+		"editor.rulers": [
+			80
+		],
+		"terminal.integrated.fontSize": 12,
+		"editor.fontSize": 12,
+		"[python]": {
+			"editor.defaultFormatter": "ms-python.autopep8",
+			"editor.formatOnSave": true
+		}
+	},
+}
