@@ -1,0 +1,4 @@
+cam_cam/cam_gain_*
+cam_cam/__pycache__/
+cam_cam/capture_*
+cam_cam/samples_*
