@@ -1,0 +1,7 @@
+# Install requirements
+$ sudo apt-get install python3-pip
+$ python3.10 -m pip install -r requirements.txt
+
+# Run
+$ python3.10 camapp.py
+
