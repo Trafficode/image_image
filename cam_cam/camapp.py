@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from camcam import CamCam
+import queue
 
 import logging
 logging.basicConfig(
@@ -26,7 +27,7 @@ if __name__ == "__main__":
     print("# --------------------------------------------------- #")
     print("# Welcome in CamApp, aplication to camera capture\n")
 
-    cam_a = CamCam("video6", 1920, 1080, 160, 2)
+    cam_a = CamCam(0, "video0", "../storage", 1920, 1080, 160, 2)
     while True:
         try:
             line = input("cmd> ").strip()
@@ -46,6 +47,15 @@ if __name__ == "__main__":
                 angle = float(param[0])
                 details = cam_a.picture_take(_angle=angle)
                 print(details)
+            elif "save" == cmd:
+                work_queue = queue.Queue()
+                cam_a.picture_match_asynq(work_queue, _save=True)
+                try:
+                    result = work_queue.get(timeout=2.0)
+                    print("result: %s" % str(result))
+                except queue.Empty:
+                    print("No result got")
+                work_queue.task_done()
         except KeyboardInterrupt:
             break
     print(".")

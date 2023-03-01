@@ -7,20 +7,32 @@ import numpy as np
 import os
 import threading
 import imutils
+from datetime import datetime
 
 
 class CamCam(object):
     ''' CamCam '''
 
-    def __init__(self, _video: str, _pw: int, _ph: int, _target_br: int,
-                 _target_br_diff: int) -> None:
+    def __init__(self, _id: int, _video: str, _save_path, _pw: int, _ph: int,
+                 _target_br: int, _target_br_diff: int) -> None:
         self.logger = logging.getLogger(_video)
+        self.id = _id
         self.video_port = _video
         self.target_br = _target_br
         self.target_br_diff = _target_br_diff
         self.cam_gain = self.__last_gain_read()
         self.last_take_status = {}
+        self.picture_dst_path = os.path.join(_save_path,
+                                             "samples_%d" % self.id)
         self.request_angle = 0
+        self.request_save = False
+        self.result_queue = None
+        self.match_angles = []
+        self.match_threshold = 0
+        self.match_tpls = []
+
+        if not os.path.exists(self.picture_dst_path):
+            os.makedirs(self.picture_dst_path)
 
         self.cam = cv2.VideoCapture("/dev/%s" % self.video_port)
         self.cam.set(cv2.CAP_PROP_FRAME_WIDTH, _pw)
@@ -37,6 +49,9 @@ class CamCam(object):
         self.picture_done_evt = threading.Event()
         self.picture_done_evt.clear()
 
+        self.match_request_evt = threading.Event()
+        self.match_request_evt.clear()
+
         self.proc_tid = threading.Thread(target=self.__run, daemon=True)
         self.proc_tid.start()
 
@@ -46,8 +61,19 @@ class CamCam(object):
         self.exit_done_evt.wait(timeout=4.0)
         if self.exit_done_evt.is_set():
             exit_status = True
-
         return (exit_status)
+
+    def picture_match_asynq(self, _result_queue, _match_threshold=0,
+                            _save=False, _match_tpls=[], _match_angles=[]):
+        if len(_match_angles) == 0:
+            self.match_angles = [0]
+        else:
+            self.match_angles = _match_angles
+        self.match_threshold = _match_threshold
+        self.match_tpls = _match_tpls
+        self.request_save = _save
+        self.result_queue = _result_queue
+        self.match_request_evt.set()
 
     def picture_take(self, _angle=0.0):
         take_status = {}
@@ -76,6 +102,34 @@ class CamCam(object):
                     picture = imutils.rotate(picture, angle=self.request_angle)
                     cv2.imwrite(img_name, picture)
                     self.picture_done_evt.set()
+
+                if self.match_request_evt.is_set():
+                    self.match_request_evt.clear()
+                    result = {"id": self.id, "status": "ok", "match": {}}
+                    picture = imutils.rotate(picture, angle=self.request_angle)
+
+                    if self.request_save:
+                        time = datetime.now().strftime("%H%M%S")
+                        img_name = "sample_%d_%s.jpg" % (self.id, time)
+                        img_path = os.path.join(
+                            self.picture_dst_path, img_name)
+                        cv2.imwrite(img_path, picture)
+
+                    # try to match here...
+                    for img_tpl in self.match_tpls:
+                        for angle in self.match_angles:
+                            match_result = self.__match_template(
+                                img_tpl, picture, self.match_threshold, angle)
+                            result["match"][img_tpl] = [angle, match_result]
+                    self.result_queue.put_nowait(result)
+
+                    self.match_angles = []
+                    self.match_tpls = []
+                    self.match_threshold = 0
+                    self.request_angle = 0
+                    self.request_save = False
+                    self.result_queue = None
+
             except:
                 self.logger.exception(
                     "CamCam %s thread failed", self.video_port)
@@ -163,6 +217,84 @@ class CamCam(object):
         gain_f.write(str(self.cam_gain))
         gain_f.close()
 
+    def __match_template(self, _img_tpl, _img_detect, _threshold, _angle):
+        '''
+        _img_tpl: try to detect this image in _img_detect
+        _img_detect: image under pressure
+        _threshold: 0 < _threshold < 1.0 
+        return:
+            _result = {
+                "detections": 0, 
+                "highest": 0, 
+                "duration": 0,
+                "avg": 0
+            }
+        '''
+        _result = {"detections": 0, "highest": 0, "duration": 0, "avg": 0}
+        _tstart = time.time()
+        main_img_rgb = cv2.imread(_img_detect)
+        if _angle != 0:
+            main_img_rgb = imutils.rotate(main_img_rgb, angle=_angle)
+
+        main_img_gray = cv2.cvtColor(main_img_rgb,  cv2.COLOR_BGR2GRAY)
+        templ_img_grey = cv2.imread(_img_tpl, 0)
+
+        # Define a similarity threshold  that needs to be met for a pixel to be
+        # considered a match
+        template_matching_threshold = _threshold
+
+        template_matching = cv2.matchTemplate(
+            templ_img_grey, main_img_gray, cv2.TM_CCOEFF_NORMED)
+
+        matched_pixels = np.where(
+            template_matching > template_matching_threshold)   # type: ignore
+        template_width, template_height = templ_img_grey.shape[::-1]
+
+        # Obtain the x,y coordinates for the matched pixels meeting the
+        # threshold conditions
+        detections = []
+        count = 0
+
+        highest = 0.0
+        buff = 0.0
+        for (x, y) in zip(matched_pixels[1], matched_pixels[0]):
+            count = count + 1
+            matching = template_matching[y, x]
+            buff += matching
+            highest = max(highest, matching)
+            match = {"TOP_LEFT_X": x,
+                     "TOP_LEFT_Y": y,
+                     "BOTTOM_RIGHT_X": x + template_width,
+                     "BOTTOM_RIGHT_Y": y + template_height,
+                     "MATCH_VALUE": matching,
+                     "LABEL": "MATCH_{}".format(count),
+                     "COLOR": (255, 0, 0)
+                     }
+            self.logger.info("%s", str(match))
+            detections.append(match)
+
+        detections_number = len(detections)
+        _result["detections"] = detections_number
+        _result["highest"] = round(highest, 3)
+        if detections_number != 0:
+            _result["avg"] = round(buff/detections_number, 3)
+        else:
+            _result["avg"] = 0
+
+        # logger.info("Make a copy of original image")
+        # image_with_detections = main_img_rgb.copy()
+        # logger.info("Plot a rectangle around the dectected match using the coord")
+        # for detection in detections:
+        #     cv2.rectangle(
+        #         image_with_detections,
+        #         (detection["TOP_LEFT_X"], detection["TOP_LEFT_Y"]),
+        #         (detection["BOTTOM_RIGHT_X"], detection["BOTTOM_RIGHT_Y"]),
+        #         detection["COLOR"],
+        #         2
+        #     )
+        # cv2.imwrite('match_detect.jpg', image_with_detections)
+        _result["duration"] = round(time.time() - _tstart, 3)
+        return (_result)
 ###############################################################################
 # END OF FILE
 ###############################################################################
