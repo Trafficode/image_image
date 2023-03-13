@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 from camcam import CamCam
 import queue
-
+import json
+import os
 import logging
+
 logging.basicConfig(
     level=logging.WARNING,
     format="%(asctime)s :: %(name)8s :: %(levelname)s :: %(message)s"
@@ -17,17 +19,28 @@ logging.basicConfig(
 # 1024X768  MJPEG 30fps YUY2 10fps
 # 800X600   MJPEG 30fps YUY2 30fps
 # 640X480   MJPEG 30fps YUY2 30fps
+if os.path.exists("cam_config.json"):
+    try:
+        config_f = open("cam_config.json", "r")
+        CamConfig = json.load(config_f)
+        config_f.close()
+    except:
+        print("\n\tLoad cam_config.json failed, bad json format...\n")
+        exit(0)
+else:
+    print("\n\tFaile cam_config.json not found! Create based on template...\n")
+    exit(0)
 
 logger = logging.getLogger("main")
-
-# ATTRS{idProduct}=="8830"
-# ATTRS{idVendor}=="32e4"
 
 if __name__ == "__main__":
     print("# --------------------------------------------------- #")
     print("# Welcome in CamApp, aplication to camera capture\n")
-
-    cam_a = CamCam(0, "cams/cam1", "../storage", 1920, 1080, 160, 2)
+    cameras = []
+    for cam in CamConfig:
+        cam = CamCam(cam["id"], cam["video"], "../storage",
+                     cam["width"], cam["height"], cam["br"], cam["br_range"])
+        cameras.append(cam)
     while True:
         try:
             line = input("cmd> ").strip()
@@ -44,23 +57,31 @@ if __name__ == "__main__":
             if "exit" == cmd:
                 break
             elif "cam" == cmd:
-                angle = float(param[0])
-                details = cam_a.picture_take(_angle=angle)
-                print(details)
+                if len(param) == 1:
+                    angle = float(param[0])
+                else:
+                    angle = 0
+                for cam in cameras:
+                    details = cam.picture_take(_angle=angle)
+                    print(details)
+
             elif "save" == cmd:
                 work_queue = queue.Queue()
-                cam_a.picture_match_asynq(work_queue, _save=True)
-                try:
-                    result = work_queue.get(timeout=2.0)
-                    print("result: %s" % str(result))
-                except queue.Empty:
-                    print("No result got")
+                for cam in cameras:
+                    details = cam.picture_match_asynq(work_queue, _save=True)
+                for _ in range(3):
+                    try:
+                        result = work_queue.get(timeout=2.0)
+                        print("result: %s" % str(result))
+                    except queue.Empty:
+                        print("No result got")
                 work_queue.task_done()
         except KeyboardInterrupt:
             break
     print(".")
     print(".")
-    print("cam_a exit status: ", cam_a.exit())
+    for cam in cameras:
+        print("cam_%d exit status: %s" % (cam.id, str(cam.exit())))
 
 print("\n\tThanks for using CamApp:)")
 

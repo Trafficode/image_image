@@ -106,7 +106,7 @@ class CamCam(object):
 
                 if self.match_request_evt.is_set():
                     self.match_request_evt.clear()
-                    result = {"id": self.id, "status": "ok", "match": {}}
+                    result = {"id": self.id, "img_status": None, "match": {}}
                     picture = imutils.rotate(picture, angle=self.request_angle)
 
                     if self.request_save:
@@ -115,6 +115,7 @@ class CamCam(object):
                         img_path = os.path.join(
                             self.picture_dst_path, img_name)
                         cv2.imwrite(img_path, picture)
+                        result["img_status"] = take_status
 
                     # try to match here...
                     for img_tpl in self.match_tpls:

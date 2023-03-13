@@ -1,0 +1,26 @@
+[
+    {
+        "id": 1,
+        "video": "cams/cam1",
+        "width": 1920,
+        "height": 1080,
+        "br": 120,
+        "br_range": 4
+    },
+    {
+        "id": 2,
+        "video": "cams/cam2",
+        "width": 1920,
+        "height": 1080,
+        "br": 120,
+        "br_range": 4
+    },
+    {
+        "id": 3,
+        "video": "cams/cam3",
+        "width": 1920,
+        "height": 1080,
+        "br": 120,
+        "br_range": 4
+    }
+]
