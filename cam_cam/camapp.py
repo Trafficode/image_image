@@ -27,7 +27,7 @@ if __name__ == "__main__":
     print("# --------------------------------------------------- #")
     print("# Welcome in CamApp, aplication to camera capture\n")
 
-    cam_a = CamCam(0, "video0", "../storage", 1920, 1080, 160, 2)
+    cam_a = CamCam(0, "cams/cam1", "../storage", 1920, 1080, 160, 2)
     while True:
         try:
             line = input("cmd> ").strip()

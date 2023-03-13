@@ -1,3 +1,4 @@
+###############################################################################
 # Install requirements
 $ sudo apt-get install python3-pip
 $ python3.10 -m pip install -r requirements.txt
@@ -5,3 +6,17 @@ $ python3.10 -m pip install -r requirements.txt
 # Run
 $ python3.10 camapp.py
 
+###############################################################################
+# Udev rules
+sudo nano /etc/udev/rules.d/99-usbcamera.rules
+
+# put content based on below
+SUBSYSTEM=="video4linux", ATTRS{idVendor}=="32e4", ATTRS{idProduct}=="8830", ATTR{index}=="0", MODE="0664", GROUP="video", SYMLINK+="cams/cam0"
+SUBSYSTEM=="video4linux", ATTRS{idVendor}=="046d", ATTRS{idProduct}=="0892", ATTR{index}=="0", MODE="0664", GROUP="video", SYMLINK+="cams/cam1"
+
+sudo chmod 644 /etc/udev/rules.d/99-usbcamera.rules
+
+# rules reload
+sudo udevadm control --reload-rules
+
+# reconnect cameras

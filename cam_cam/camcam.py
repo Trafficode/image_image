@@ -99,7 +99,7 @@ class CamCam(object):
                 if self.picture_request_evt.is_set():
                     self.picture_request_evt.clear()
                     self.last_take_status = take_status
-                    img_name = "capture_%s.jpg" % self.video_port
+                    img_name = "capture_cam%d.jpg" % self.id
                     picture = imutils.rotate(picture, angle=self.request_angle)
                     cv2.imwrite(img_name, picture)
                     self.picture_done_evt.set()
@@ -204,7 +204,7 @@ class CamCam(object):
         return (br)
 
     def __last_gain_read(self) -> float:
-        fn = "cam_gain_%s" % self.video_port
+        fn = "cam%d_gain" % self.id
         cam_gain = 60
         if os.path.exists(fn):
             gain_f = open(fn, "r")
@@ -213,7 +213,7 @@ class CamCam(object):
         return (cam_gain)
 
     def __last_gain_save(self) -> None:
-        fn = "cam_gain_%s" % self.video_port
+        fn = "cam%d_gain" % self.id
         gain_f = open(fn, "w")
         gain_f.write(str(self.cam_gain))
         gain_f.close()
