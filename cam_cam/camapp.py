@@ -19,6 +19,7 @@ logging.basicConfig(
 # 1024X768  MJPEG 30fps YUY2 10fps
 # 800X600   MJPEG 30fps YUY2 30fps
 # 640X480   MJPEG 30fps YUY2 30fps
+
 if os.path.exists("cam_config.json"):
     try:
         config_f = open("cam_config.json", "r")
