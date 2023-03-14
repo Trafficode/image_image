@@ -4,3 +4,6 @@ cam_cam/capture_*
 cam_cam/samples_*
 storage/
 cam_cam/cam_config.json
+cam_cam/cam3_gain
+cam_cam/cam2_gain
+cam_cam/cam1_gain
