@@ -20,16 +20,25 @@ logging.basicConfig(
 # 800X600   MJPEG 30fps YUY2 30fps
 # 640X480   MJPEG 30fps YUY2 30fps
 
-if os.path.exists("cam_config.json"):
-    try:
-        config_f = open("cam_config.json", "r")
-        CamConfig = json.load(config_f)
-        config_f.close()
-    except:
-        print("\n\tLoad cam_config.json failed, bad json format...\n")
-        exit(0)
-else:
-    print("\n\tFaile cam_config.json not found! Create based on template...\n")
+CamConfig = None
+
+
+def confif_reload():
+    config = None
+    if os.path.exists("cam_config.json"):
+        try:
+            config_f = open("cam_config.json", "r")
+            config = json.load(config_f)
+            config_f.close()
+        except:
+            print("\n\tLoad cam_config.json failed, bad json format...\n")
+    else:
+        print("\n\tFaile cam_config.json not found! Create based on template...\n")
+    return (config)
+
+
+CamConfig = confif_reload()
+if not CamConfig:
     exit(0)
 
 logger = logging.getLogger("main")
@@ -58,6 +67,7 @@ if __name__ == "__main__":
             if "exit" == cmd:
                 break
             elif "cam" == cmd:
+                CamConfig = confif_reload()
                 if len(param) == 1:
                     angle = float(param[0])
                 else:
@@ -67,6 +77,7 @@ if __name__ == "__main__":
                     print(details)
 
             elif "save" == cmd:
+                CamConfig = confif_reload()
                 work_queue = queue.Queue()
                 for cam in cameras:
                     details = cam.picture_match_asynq(work_queue, _save=True)
