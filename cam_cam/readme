@@ -8,18 +8,33 @@ $ python3.10 camapp.py
 
 ###############################################################################
 # Udev rules
+# https://opensource.com/article/22/1/cameras-usb-ports-obs
 sudo nano /etc/udev/rules.d/99-usbcamera.rules
 
+# list usb devices with their atributs
+lsusb
+
+# print phisical usb port where device is connected
+sudo udevadm info --attribute-walk /dev/bus/usb/003/004 | grep "KERNEL="
+sudo udevadm info --attribute-walk /dev/bus/usb/003/005 | grep "KERNEL="
+sudo udevadm info --attribute-walk /dev/bus/usb/003/003 | grep "KERNEL="
+
 # put content based on below
-SUBSYSTEM=="video4linux", ATTRS{idVendor}=="32e4", ATTRS{idProduct}=="8830", ATTR{index}=="0", MODE="0664", GROUP="video", SYMLINK+="cams/cam0"
-SUBSYSTEM=="video4linux", ATTRS{idVendor}=="046d", ATTRS{idProduct}=="0892", ATTR{index}=="0", MODE="0664", GROUP="video", SYMLINK+="cams/cam1"
+SUBSYSTEM=="video4linux", KERNEL=="3-4", ATTRS{idVendor}=="32e4", ATTRS{idProduct}=="8830", ATTR{index}=="0", MODE="0664", GROUP="video", SYMLINK+="cams/cam0"
+SUBSYSTEM=="video4linux", KERNEL=="3-3", ATTRS{idVendor}=="046d", ATTRS{idProduct}=="0892", ATTR{index}=="0", MODE="0664", GROUP="video", SYMLINK+="cams/cam1"
+SUBSYSTEM=="video4linux", KERNEL=="3-3", ATTRS{idVendor}=="1dfc", ATTRS{idProduct}=="8513", ATTR{index}=="0", MODE="0664", GROUP="video", SYMLINK+="cams/cam0"
+
+# old one 
+SUBSYSTEM=="video4linux", ATTRS{idVendor}=="32e4", ATTRS{idProduct}=="0317", ATTR{index}=="0", MODE="0664", GROUP="video", SYMLINK+="cams/cam2"
+SUBSYSTEM=="video4linux", ATTRS{idVendor}=="32e4", ATTRS{idProduct}=="9230", ATTR{index}=="0", MODE="0664", GROUP="video", SYMLINK+="cams/cam3"
 
 sudo chmod 644 /etc/udev/rules.d/99-usbcamera.rules
 
 # rules reload
 sudo udevadm control --reload-rules
 
-# reconnect cameras
+# reconnect cameras physically!!!
 
-# print serial attr
+# print serial attr - not halpfull this time
 udevadm info -a -n /dev/cams/cam1 | grep '{serial}'
+

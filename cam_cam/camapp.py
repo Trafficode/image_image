@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
-from camcam import CamCam
 import queue
 import json
 import os
 import logging
+import traceback
+
+from camcam import CamCam
 
 logging.basicConfig(
     level=logging.WARNING,
@@ -67,7 +69,6 @@ if __name__ == "__main__":
             if "exit" == cmd:
                 break
             elif "cam" == cmd:
-                CamConfig = confif_reload()
                 if len(param) == 1:
                     angle = float(param[0])
                 else:
@@ -75,20 +76,31 @@ if __name__ == "__main__":
                 for cam in cameras:
                     details = cam.picture_take(_angle=angle)
                     print(details)
-
-            elif "save" == cmd:
+            elif "reinit" == cmd:
+                for cam in cameras:
+                    print("cam_%d exit status: %s" % (cam.id, str(cam.exit())))
                 CamConfig = confif_reload()
+                cameras = []
+                for cam in CamConfig:
+                    cam = CamCam(cam["id"], cam["video"], "../storage",
+                                 cam["width"], cam["height"], cam["br"],
+                                 cam["br_range"])
+                    cameras.append(cam)
+            elif "save" == cmd:
                 work_queue = queue.Queue()
                 for cam in cameras:
                     details = cam.picture_match_asynq(work_queue, _save=True)
-                for _ in range(3):
+                for _ in range(len(cameras)):
                     try:
                         result = work_queue.get(timeout=2.0)
                         print("result: %s" % str(result))
                     except queue.Empty:
                         print("No result got")
-                work_queue.task_done()
+
         except KeyboardInterrupt:
+            break
+        except:
+            print("main failed\n%s", traceback.format_exc())
             break
     print(".")
     print(".")
